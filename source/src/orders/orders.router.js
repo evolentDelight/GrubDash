@@ -10,6 +10,6 @@ router
   .post(controller.create)
   .all(methodNotAllowed);
 
-router.route("/:orderId").all(methodNotAllowed);
+router.route("/:orderId").get(controller.read).all(methodNotAllowed);
 
 module.exports = router;

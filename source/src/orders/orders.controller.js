@@ -8,6 +8,21 @@ const orders = require(path.resolve("src/data/orders-data"));
 const nextId = require("../utils/nextId");
 
 // Validation functions
+function orderExists(req, res, next) {
+  const { orderId } = req.params;
+
+  const foundOrder = orders.find((order) => order.id === orderId);
+
+  if (foundOrder) {
+    res.locals.order = foundOrder;
+    return next();
+  }
+  next({
+    status: 404,
+    message: `Order id not found ${orderId}`,
+  });
+}
+
 function bodyDataHas(propertyName) {
   return function (req, res, next) {
     const { data = {} } = req.body;
@@ -58,6 +73,10 @@ function list(req, res, next) {
   res.json({ data: orders });
 }
 
+function read(req, res, next) {
+  res.json({ data: res.locals.order });
+}
+
 function create(req, res, next) {
   const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
 
@@ -83,4 +102,5 @@ module.exports = {
     quantityPropertyIsValid,
     create,
   ],
+  read: [orderExists, read],
 };
