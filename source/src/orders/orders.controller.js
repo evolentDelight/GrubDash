@@ -110,6 +110,17 @@ function statusIsDelivered(req, res, next) {
   });
 }
 
+function isOrderPending(req, res, next) {
+  //If so, delete
+  if (res.locals.order.status === "pending") {
+    return next();
+  }
+  next({
+    status: 400,
+    message: `An order cannot be deleted unless it is pending. `,
+  });
+}
+
 // TODO: Implement the /orders handlers needed to make the tests pass
 function list(req, res, next) {
   res.json({ data: orders });
@@ -149,6 +160,15 @@ function update(req, res, next) {
   res.json({ data: order });
 }
 
+function destroy(req, res, next) {
+  const { orderId } = req.params;
+  const index = orders.findIndex((order) => order.id === orderId);
+
+  const deletedOrders = orders.splice(index, 1);
+
+  res.sendStatus(204);
+}
+
 module.exports = {
   list,
   create: [
@@ -170,4 +190,5 @@ module.exports = {
     statusIsDelivered,
     update,
   ],
+  delete: [orderExists, isOrderPending, destroy],
 };
