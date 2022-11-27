@@ -1,3 +1,4 @@
+const { dirxml } = require("console");
 const { stat } = require("fs");
 const path = require("path");
 
@@ -29,7 +30,7 @@ function bodyDataHas(propertyName) {
     if (data[propertyName]) {
       return next();
     }
-    next({ status: 400, message: propertyName });
+    next({ status: 400, message: `Order must include a ${propertyName}` });
   };
 }
 
@@ -68,6 +69,47 @@ function quantityPropertyIsValid(req, res, next) {
   return next();
 }
 
+function idMatches(req, res, next) {
+  const { orderId } = req.params;
+  const { data: { id } = {} } = req.body;
+
+  if (!id) {
+    return next();
+  }
+  if (id !== orderId) {
+    next({
+      status: 400,
+      message: `Order id does not match route id. Order: ${id}, Route: ${orderId}.`,
+    });
+  }
+  return next();
+}
+
+function statusIsValid(req, res, next) {
+  const { data = {} } = req.body;
+
+  const validStatus = ["pending", "preparing", "out-for-delivery", "delivered"];
+
+  if (validStatus.includes(data[`status`])) {
+    return next();
+  }
+  next({
+    status: 400,
+    message: `Order must have a status of pending, preparing, out-for-delivery, delivered`,
+  });
+}
+
+function statusIsDelivered(req, res, next) {
+  const { data = {} } = req.body;
+  if (data[`status`] !== "delivered") {
+    return next();
+  }
+  next({
+    status: 400,
+    message: `A delivered order cannot be changed`,
+  });
+}
+
 // TODO: Implement the /orders handlers needed to make the tests pass
 function list(req, res, next) {
   res.json({ data: orders });
@@ -93,6 +135,20 @@ function create(req, res, next) {
   res.status(201).json({ data: newOrder });
 }
 
+function update(req, res, next) {
+  const order = res.locals.order;
+
+  const { data: { deliverTo, mobileNumber, status, dishes } = {} } = req.body;
+
+  order.id = req.params.orderId;
+  order.deliverTo = deliverTo;
+  order.mobileNumber = mobileNumber;
+  order.status = status;
+  order.dishes = dishes;
+
+  res.json({ data: order });
+}
+
 module.exports = {
   list,
   create: [
@@ -103,4 +159,15 @@ module.exports = {
     create,
   ],
   read: [orderExists, read],
+  update: [
+    orderExists,
+    bodyDataHas("deliverTo"),
+    bodyDataHas("mobileNumber"),
+    idMatches,
+    statusIsValid,
+    dishPropertyIsValid,
+    quantityPropertyIsValid,
+    statusIsDelivered,
+    update,
+  ],
 };
