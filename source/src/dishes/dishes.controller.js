@@ -46,6 +46,24 @@ function dishExists(req, res, next) {
   });
 }
 
+function idMatches(req, res, next) {
+  //ID in params must be equal to the ID in body
+  const { dishId } = req.params;
+
+  const { data: { id } = {} } = req.body;
+
+  if (!id) {
+    return next();
+  }
+  if (id !== dishId) {
+    next({
+      status: 400,
+      message: `Dish id does not match route id. Dish: ${id}, Route: ${dishId}`,
+    });
+  }
+  return next();
+}
+
 // TODO: Implement the /dishes handlers needed to make the tests pass
 function list(req, res, next) {
   res.json({ data: dishes });
@@ -71,6 +89,20 @@ function create(req, res, next) {
   res.status(201).json({ data: newDish });
 }
 
+function update(req, res, next) {
+  const dish = res.locals.dish;
+
+  const { data: { name, description, price, image_url } = {} } = req.body;
+
+  dish.id = req.params.dishId;
+  dish.name = name;
+  dish.description = description;
+  dish.price = price;
+  dish.image_url = image_url;
+
+  res.json({ data: dish });
+}
+
 module.exports = {
   list,
   create: [
@@ -82,4 +114,14 @@ module.exports = {
     create,
   ],
   read: [dishExists, read],
+  update: [
+    dishExists,
+    bodyDataHas("name"),
+    bodyDataHas("description"),
+    bodyDataHas("price"),
+    bodyDataHas("image_url"),
+    priceIsValid,
+    idMatches,
+    update,
+  ],
 };
